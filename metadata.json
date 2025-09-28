@@ -1,0 +1,5 @@
+{
+  "name": "Gemini API Tester",
+  "description": "A comprehensive API testing tool with a built-in AI assistant powered by Gemini. Build and test REST APIs, inspect responses, and get intelligent explanations and suggestions to streamline your development workflow.",
+  "requestFramePermissions": []
+}
