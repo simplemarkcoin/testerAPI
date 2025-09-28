@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { ApiResponse } from '../types';
 import { CodeBlock } from './CodeBlock';
@@ -34,7 +33,7 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ response, loading,
 
   if (!response) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-gray-500">
+      <div className="flex flex-col items-center justify-center h-full text-gray-500 text-center">
         <InfoIcon className="w-16 h-16 mb-4" />
         <h2 className="text-xl font-semibold">Ready to send</h2>
         <p>Send a request to see the response here.</p>
@@ -45,7 +44,7 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ response, loading,
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center space-x-4 mb-4 text-sm">
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mb-4 text-sm">
         <span className={`font-bold ${getStatusColor(response.status)}`}>
           Status: {response.status} {response.statusText}
         </span>
@@ -53,12 +52,12 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ response, loading,
       </div>
       
       <div className="flex-1 flex flex-col min-h-0">
-        <div className="flex border-b border-gray-700">
+        <div className="flex border-b border-gray-700 overflow-x-auto">
             {['body', 'headers', 'ai'].map((tab) => (
                 <button
                     key={tab}
                     onClick={() => setActiveTab(tab as Tab)}
-                    className={`px-4 py-2 text-sm font-medium focus:outline-none ${activeTab === tab ? 'border-b-2 border-cyan-400 text-cyan-400' : 'text-gray-400 hover:bg-gray-800'}`}
+                    className={`px-4 py-2 text-sm font-medium focus:outline-none whitespace-nowrap ${activeTab === tab ? 'border-b-2 border-cyan-400 text-cyan-400' : 'text-gray-400 hover:bg-gray-800'}`}
                 >
                    {tab === 'ai' ? 'AI Assistant' : tab.charAt(0).toUpperCase() + tab.slice(1)}
                 </button>
@@ -72,9 +71,9 @@ export const ResponsePanel: React.FC<ResponsePanelProps> = ({ response, loading,
           {activeTab === 'headers' && (
             <div className="p-4 font-mono text-sm">
               {Object.entries(response.headers).map(([key, value]) => (
-                <div key={key} className="flex">
-                  <span className="font-bold text-gray-400 w-1/4">{key}:</span>
-                  <span className="text-gray-200 break-all">{value}</span>
+                <div key={key} className="flex flex-col sm:flex-row">
+                  <span className="font-bold text-gray-400 w-full sm:w-1/4">{key}:</span>
+                  <span className="text-gray-200 break-all w-full sm:w-3/4">{value}</span>
                 </div>
               ))}
             </div>

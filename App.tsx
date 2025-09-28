@@ -1,13 +1,12 @@
-
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { RequestPanel } from './components/RequestPanel';
 import { ResponsePanel } from './components/ResponsePanel';
-import { HistoryPanel } from './components/HistoryPanel';
+import { Sidebar } from './components/Sidebar';
 import { sendRequest } from './services/apiService';
-import { analyzeApiResponse } from './services/geminiService';
-import type { ApiRequest, ApiResponse, HistoryItem, AuthConfig, KeyValuePair } from './types';
+import { analyzeApiResponse, brainstormContent, summarizeData } from './services/geminiService';
+import type { ApiRequest, ApiResponse, HistoryItem } from './types';
 import { HttpMethod, AuthType } from './constants';
-import { LogoIcon } from './components/icons';
+import { MenuIcon } from './components/icons';
 
 const App: React.FC = () => {
   const [request, setRequest] = useState<ApiRequest>({
@@ -21,9 +20,32 @@ const App: React.FC = () => {
   });
   const [response, setResponse] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
+  const [history, setHistory] = useState<HistoryItem[]>(() => {
+    try {
+      const savedHistory = localStorage.getItem('api-tester-history');
+      return savedHistory ? JSON.parse(savedHistory) : [];
+    } catch (e) {
+      console.error("Failed to parse history from localStorage", e);
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem('api-tester-history', JSON.stringify(history));
+    } catch (e) {
+      console.error("Failed to save history to localStorage", e);
+    }
+  }, [history]);
+
+  // AI State
   const [aiLoading, setAiLoading] = useState<boolean>(false);
   const [aiAnalysis, setAiAnalysis] = useState<string>('');
-  const [history, setHistory] = useState<HistoryItem[]>([]);
+  const [aiToolLoading, setAiToolLoading] = useState<boolean>(false);
+  const [aiToolResult, setAiToolResult] = useState<string>('');
+
+  // UI State
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   const updateRequest = useCallback(<K extends keyof ApiRequest>(key: K, value: ApiRequest[K]) => {
     setRequest(prev => ({ ...prev, [key]: value }));
@@ -69,50 +91,103 @@ const App: React.FC = () => {
     }
   };
 
+  const handleBrainstorm = async (prompt: string) => {
+    setAiToolLoading(true);
+    setAiToolResult('');
+    try {
+      const result = await brainstormContent(prompt);
+      setAiToolResult(result);
+    } catch (error: any) {
+      setAiToolResult(`Error: ${error.message}`);
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+  const handleSummarize = async (data: any) => {
+    setAiToolLoading(true);
+    setAiToolResult('');
+    try {
+      const result = await summarizeData(data);
+      setAiToolResult(result);
+    } catch (error: any) {
+      setAiToolResult(`Error: ${error.message}`);
+    } finally {
+      setAiToolLoading(false);
+    }
+  };
+
+
   const loadFromHistory = useCallback((item: HistoryItem) => {
     setRequest(item);
     setResponse(null);
     setAiAnalysis('');
+    if (window.innerWidth < 768) { // md breakpoint
+        setIsSidebarOpen(false);
+    }
   }, []);
 
   const handleClearHistory = useCallback(() => {
     setHistory([]);
   }, []);
 
+  const sidebarProps = {
+    history,
+    onSelectHistory: loadFromHistory,
+    onClearHistory: handleClearHistory,
+    response,
+    onBrainstorm: handleBrainstorm,
+    onSummarize: handleSummarize,
+    aiToolResult: aiToolResult,
+    aiToolLoading: aiToolLoading,
+  };
+
   return (
-    <div className="flex h-screen font-sans bg-gray-900 text-gray-200">
-      <div className="w-1/5 min-w-[250px] max-w-[350px] flex flex-col border-r border-gray-700">
-        <div className="p-4 border-b border-gray-700 flex items-center space-x-2">
-            <LogoIcon className="w-8 h-8 text-cyan-400" />
-            <h1 className="text-xl font-bold">Gemini API Tester</h1>
-        </div>
-        <HistoryPanel history={history} onSelect={loadFromHistory} onClear={handleClearHistory} />
+    <div className="flex h-screen font-sans bg-gray-900 text-gray-200 overflow-hidden">
+      {/* Sidebar for medium and up */}
+      <div className="hidden md:flex md:w-1/3 lg:w-1/4 md:min-w-[300px] md:max-w-[400px]">
+        <Sidebar {...sidebarProps} />
       </div>
 
-      <div className="flex-1 flex flex-col">
-        <div className="flex-1 p-4 overflow-y-auto">
-          <RequestPanel
-            request={request}
-            onMethodChange={(method) => updateRequest('method', method)}
-            onUrlChange={(url) => updateRequest('url', url)}
-            onParamsChange={(params) => updateRequest('params', params)}
-            onAuthChange={(auth) => updateRequest('auth', auth)}
-            onHeadersChange={(headers) => updateRequest('headers', headers)}
-            onBodyChange={(body) => updateRequest('body', body)}
-            onSend={handleSend}
-            loading={loading}
-          />
-        </div>
+      {/* Mobile Sidebar (off-canvas) */}
+      <div className={`fixed inset-y-0 left-0 z-30 w-4/5 max-w-sm transform transition-transform duration-300 ease-in-out md:hidden ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+         <Sidebar {...sidebarProps} />
+      </div>
+      {isSidebarOpen && <div className="fixed inset-0 z-20 bg-black opacity-50 md:hidden" onClick={() => setIsSidebarOpen(false)}></div>}
 
-        <div className="flex-1 p-4 border-t border-gray-700 overflow-y-auto">
-          <ResponsePanel
-            response={response}
-            loading={loading}
-            aiAnalysis={aiAnalysis}
-            onAnalyze={handleAnalyze}
-            aiLoading={aiLoading}
-          />
-        </div>
+      <div className="flex-1 flex flex-col min-w-0">
+        <header className="flex items-center p-2 border-b border-gray-700 md:hidden">
+            <button onClick={() => setIsSidebarOpen(true)} className="p-2 rounded-md hover:bg-gray-700" aria-label="Open sidebar">
+                <MenuIcon className="w-6 h-6"/>
+            </button>
+            <h1 className="text-lg font-bold ml-2">API Tester</h1>
+        </header>
+
+        <main className="flex-1 flex flex-col overflow-hidden">
+          <div className="flex-1 p-2 md:p-4 overflow-y-auto">
+            <RequestPanel
+              request={request}
+              onMethodChange={(method) => updateRequest('method', method)}
+              onUrlChange={(url) => updateRequest('url', url)}
+              onParamsChange={(params) => updateRequest('params', params)}
+              onAuthChange={(auth) => updateRequest('auth', auth)}
+              onHeadersChange={(headers) => updateRequest('headers', headers)}
+              onBodyChange={(body) => updateRequest('body', body)}
+              onSend={handleSend}
+              loading={loading}
+            />
+          </div>
+
+          <div className="flex-1 p-2 md:p-4 border-t border-gray-700 overflow-y-auto">
+            <ResponsePanel
+              response={response}
+              loading={loading}
+              aiAnalysis={aiAnalysis}
+              onAnalyze={handleAnalyze}
+              aiLoading={aiLoading}
+            />
+          </div>
+        </main>
       </div>
     </div>
   );

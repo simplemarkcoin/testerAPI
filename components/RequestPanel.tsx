@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import type { ApiRequest, AuthConfig, KeyValuePair } from '../types';
 import { HttpMethod, AuthType, HTTP_METHOD_COLORS } from '../constants';
@@ -106,11 +105,11 @@ export const RequestPanel: React.FC<RequestPanelProps> = ({
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center space-x-2 mb-4">
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-4">
         <select
           value={request.method}
           onChange={(e) => onMethodChange(e.target.value as HttpMethod)}
-          className={`font-mono font-bold bg-gray-800 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 ${HTTP_METHOD_COLORS[request.method]}`}
+          className={`font-mono font-bold bg-gray-800 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 ${HTTP_METHOD_COLORS[request.method]} w-full sm:w-auto`}
         >
           {Object.values(HttpMethod).map(method => (
             <option key={method} value={method}>{method}</option>
@@ -121,12 +120,12 @@ export const RequestPanel: React.FC<RequestPanelProps> = ({
           value={request.url}
           onChange={(e) => onUrlChange(e.target.value)}
           placeholder="https://api.example.com/resource"
-          className="flex-1 bg-gray-800 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono"
+          className="flex-1 bg-gray-800 border border-gray-600 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-cyan-500 font-mono min-w-0"
         />
         <button
           onClick={onSend}
           disabled={loading}
-          className="flex items-center space-x-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200"
+          className="flex items-center justify-center space-x-2 bg-cyan-600 hover:bg-cyan-500 disabled:bg-gray-500 text-white font-bold py-2 px-4 rounded-md transition-colors duration-200 w-full sm:w-auto"
         >
           <SendIcon className="w-5 h-5" />
           <span>{loading ? 'Sending...' : 'Send'}</span>
@@ -134,12 +133,12 @@ export const RequestPanel: React.FC<RequestPanelProps> = ({
       </div>
 
       <div className="flex-1 flex flex-col min-h-0">
-          <div className="flex border-b border-gray-700">
+          <div className="flex border-b border-gray-700 overflow-x-auto">
               {['params', 'auth', 'headers', 'body'].map((tab) => (
                   <button
                       key={tab}
                       onClick={() => setActiveTab(tab as Tab)}
-                      className={`px-4 py-2 text-sm font-medium focus:outline-none ${activeTab === tab ? 'border-b-2 border-cyan-400 text-cyan-400' : 'text-gray-400 hover:bg-gray-800'}`}
+                      className={`px-4 py-2 text-sm font-medium focus:outline-none whitespace-nowrap ${activeTab === tab ? 'border-b-2 border-cyan-400 text-cyan-400' : 'text-gray-400 hover:bg-gray-800'}`}
                   >
                       {tab.charAt(0).toUpperCase() + tab.slice(1)}
                   </button>

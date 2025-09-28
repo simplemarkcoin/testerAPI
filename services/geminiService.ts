@@ -1,4 +1,3 @@
-
 import { GoogleGenAI } from "@google/genai";
 import type { ApiRequest, ApiResponse } from "../types";
 
@@ -12,8 +11,8 @@ const createPrompt = (request: ApiRequest, response: ApiResponse): string => {
 - Method: ${method}
 - URL: ${url}
 - Auth: ${JSON.stringify(auth, null, 2)}
-- Params: ${JSON.stringify(params, null, 2)}
-- Headers: ${JSON.stringify(headers, null, 2)}
+- Params: ${JSON.stringify(params.filter(p => p.enabled && p.key), null, 2)}
+- Headers: ${JSON.stringify(headers.filter(h => h.enabled && h.key), null, 2)}
 - Body: ${body || 'No body sent.'}
 `;
 
@@ -48,21 +47,46 @@ Based on the request and response, provide a detailed analysis.
 `;
 };
 
+const callGemini = async (prompt: string): Promise<string> => {
+    if (!process.env.API_KEY) {
+        throw new Error("API_KEY environment variable is not set.");
+    }
+    try {
+        const result = await ai.models.generateContent({
+            model: 'gemini-2.5-flash',
+            contents: prompt
+        });
+        return result.text;
+    } catch (error: any) {
+        console.error("Error calling Gemini API:", error);
+        throw new Error(`An error occurred while communicating with the AI: ${error.message}`);
+    }
+}
+
 export const analyzeApiResponse = async (request: ApiRequest, response: ApiResponse): Promise<string> => {
   if (!process.env.API_KEY) {
     return "Error: API_KEY environment variable is not set. Please configure it to use the AI Assistant.";
   }
-  
-  try {
-    const prompt = createPrompt(request, response);
-    const result = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt
-    });
+  const prompt = createPrompt(request, response);
+  return callGemini(prompt);
+};
 
-    return result.text;
-  } catch (error: any) {
-    console.error("Error calling Gemini API:", error);
-    return `An error occurred while analyzing the response: ${error.message}`;
-  }
+export const brainstormContent = async (topic: string): Promise<string> => {
+    const prompt = `You are a creative assistant. Your goal is to brainstorm content ideas.
+Provide a list of interesting and diverse ideas related to the following topic.
+Format your response as a simple, scannable list using newlines, not markdown lists.
+
+Topic: "${topic}"`;
+    return callGemini(prompt);
+};
+
+export const summarizeData = async (data: any): Promise<string> => {
+    const dataString = typeof data === 'object' ? JSON.stringify(data, null, 2) : String(data);
+    const prompt = `You are an AI assistant. Your goal is to explain technical data to a non-technical person.
+Summarize the key information from the following data in a simple, easy-to-understand paragraph.
+Avoid jargon and focus on what the data means in practical terms.
+
+Data:
+${dataString}`;
+    return callGemini(prompt);
 };
